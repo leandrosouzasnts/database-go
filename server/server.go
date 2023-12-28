@@ -39,32 +39,30 @@ func CreatedUser(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	_, erro = stmt.Exec(user.Name)
+	// _, erro = stmt.Exec(user.Name)
+	// if erro != nil {
+	// 	w.Write([]byte(erro.Error()))
+	// 	return
+	// }
+
+	transaction, erro := connection.Begin()
 	if erro != nil {
 		w.Write([]byte(erro.Error()))
-		return
 	}
 
-	//To Do - Colocar uma transaction
+	_, erro = transaction.Stmt(stmt).Exec(user.Name)
 
-	// transaction, erro := connection.Begin()
-	// if erro != nil {
-	// 	w.Write([]byte(erro.Error()))
-	// }
+	if erro != nil {
+		transaction.Rollback()
+		w.Write([]byte("Falha ao Gravar Usuário no Banco de Dados"))
+	}
 
-	// _, erro = transaction.Stmt(stmt).Exec(user.Name)
+	erro = transaction.Commit()
+	if erro != nil {
+		w.Write([]byte(erro.Error()))
+	}
 
-	// if erro != nil {
-	// 	transaction.Rollback()
-	// 	w.Write([]byte("Falha ao Gravar Usuário no Banco de Dados"))
-	// }
-
-	// erro = transaction.Commit()
-	// if erro != nil {
-	// 	w.Write([]byte(erro.Error()))
-	// }
-
-	fmt.Println("Usuário cadastrado no Banco de Dados")
+	fmt.Printf("Usuário: %s cadastrado no Banco de Dados", user.Name)
 
 	var userResponse model.User
 	err := connection.QueryRow("SELECT id, name FROM users WHERE id = LAST_INSERT_ID()").Scan(&userResponse.ID, &userResponse.Name)
