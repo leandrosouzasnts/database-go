@@ -87,3 +87,49 @@ func CreatedUser(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBody)
 
 }
+
+func GetUser(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+
+	connection, error := db.ConnectDB()
+	if error != nil {
+		w.Write([]byte("Falha ao conectar no Banco de Dados"))
+		return
+	}
+
+	rows, error := connection.Query("SELECT id, name FROM users")
+	if error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Falha ao carregar usuários do Banco de Dados"))
+		return
+	}
+
+	defer rows.Close()
+
+	var users []model.User
+
+	for rows.Next() {
+		var user model.User
+		error := rows.Scan(&user.ID, &user.Name)
+		if error != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Falha ao atribuir usuário do Banco de Dados"))
+			return
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Escreva a resposta JSON na resposta HTTP
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(users)
+}
